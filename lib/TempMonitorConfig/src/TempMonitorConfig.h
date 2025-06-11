@@ -18,12 +18,18 @@ private:
     char fieldEmailSender[50];
     char fieldPassEmailSender[50];
     char fieldEmailRec1[50];
+    char fieldEmailRec2[50];
+    char fieldEmailRec3[50];
+    char fieldEmailRec4[50];
+    char fieldEmailRec5[50];
     bool fieldAlertsActive;
 
     void saveConfigFile();
     bool loadConfigFile();
     static void configModeCallback(WiFiManager* myWiFiManager);
 
+    static String validateEmail(const String& email);
+    
 public:
     TempMonitorConfig();
     bool begin(bool forceConfig = false);
