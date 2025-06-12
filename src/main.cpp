@@ -1,12 +1,15 @@
 #include <Arduino.h>
 #include "TempMonitorConfig.h"
-
+#include "SendTempTask.h"
 TempMonitorConfig config;
+SendTempTask sendTask;
 
-void setup() {
+void setup()
+{
     Serial.begin(115200);
-    
-    if (!config.begin()) {
+
+    if (!config.begin())
+    {
         Serial.println("Failed to configure WiFi");
         delay(3000);
         ESP.restart();
@@ -15,7 +18,16 @@ void setup() {
     Serial.println("WiFi connected");
     Serial.print("IP address: ");
     Serial.println(WiFi.localIP());
+
+    if (!sendTask.begin(config.getFrecMuestreo()))
+    {
+        Serial.print("Fallo al iniciar tarea de envio");
+        ESP.restart();
+        delay(3000);
+    }
 }
 
-void loop() {
+void loop()
+{
+    vTaskDelay(1);
 }

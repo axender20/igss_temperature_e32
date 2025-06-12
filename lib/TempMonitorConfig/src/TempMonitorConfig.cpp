@@ -4,9 +4,16 @@ const char *TempMonitorConfig::JSON_CONFIG_FILE = "/mConf.json";
 
 String TempMonitorConfig::validateEmail(const String &email)
 {
-  if (email.length() == 0)
+  uint emLen = email.length();
+
+  if (emLen == 0)
   {
     return String("");
+  }
+
+  if (emLen >= MAX_FIELD_LENGTH)
+  {
+    return String("Demasiados caracteres ingresados");
   }
 
   if (email.indexOf('@') == -1)
@@ -147,10 +154,11 @@ void TempMonitorConfig::configModeCallback(WiFiManager *myWiFiManager)
   Serial.println(WiFi.softAPIP());
 }
 
-bool TempMonitorConfig::begin(bool forceConfig)
+bool TempMonitorConfig::begin()
 {
   WiFi.mode(WIFI_STA);
-  forceConfig = true; // debug only
+  bool forceConfig = true; // debug only
+  // bool forceConfig = false;
 
   if (!loadConfigFile())
   {
@@ -179,8 +187,8 @@ bool TempMonitorConfig::begin(bool forceConfig)
   frec_muestreo_text_box.setValidation([](const char *value)
                                        {
                                           int freq = String(value).toInt();
-                                          if (isnan(freq) || freq < 1 || freq > 14400) {
-                                            return String("Debe estar entre 1 y 14400 seg.");
+                                          if (isnan(freq) || freq < 15 || freq > 14400) {
+                                            return String("Debe estar entre 15 y 14400 seg.");
                                           }
                                           return String(""); });
 
@@ -195,7 +203,6 @@ bool TempMonitorConfig::begin(bool forceConfig)
     chkAlertActiveHtml = "type=\"checkbox\"";
   }
   WiFiManagerParameter alert_active_checkbox("id_alert_active", "Alertas activadas", "C", 2, chkAlertActiveHtml, 2);
-  // WiFiManagerParameter a("id1", "label", "defVal", 50, "customhtml", labelPlacement);
 
   char umbMaxConvertedValue[7];
   sprintf(umbMaxConvertedValue, "%.2f", fieldUmbMax);
@@ -231,46 +238,53 @@ bool TempMonitorConfig::begin(bool forceConfig)
 
   WiFiManagerParameter email_sender_text_box(
       "id_email_sender", "Email de origen",
-      fieldEmailSender, 50, "type='email'");
+      fieldEmailSender, MAX_FIELD_LENGTH, "type='email'");
 
   email_sender_text_box.setValidation([](const char *value)
                                       { return validateEmail(String(value)); });
 
   WiFiManagerParameter pass_email_sender_text_box(
       "id_pass_email_sender", "Contraseña email de origen",
-      fieldPassEmailSender, 50);
+      fieldPassEmailSender, MAX_FIELD_LENGTH);
+  pass_email_sender_text_box.setValidation([](const char *value)
+                                           { 
+                                              if (String(value).length() >= MAX_FIELD_LENGTH)
+                                              {
+                                                return String("Demasiados caracteres ingresados");
+                                              }
+                                              return String(""); });
 
   WiFiManagerParameter email_rec1_text_box(
       "id_email_rec1", "Email de destino 1",
-      fieldEmailRec1, 50, "type='email'");
+      fieldEmailRec1, MAX_FIELD_LENGTH, "type='email'");
 
   email_rec1_text_box.setValidation([](const char *value)
                                     { return validateEmail(String(value)); });
 
   WiFiManagerParameter email_rec2_text_box(
       "id_email_rec2", "Email de destino 2",
-      fieldEmailRec2, 50, "type='email'");
+      fieldEmailRec2, MAX_FIELD_LENGTH, "type='email'");
 
   email_rec2_text_box.setValidation([](const char *value)
                                     { return validateEmail(String(value)); });
 
   WiFiManagerParameter email_rec3_text_box(
       "id_email_rec3", "Email de destino 3",
-      fieldEmailRec3, 50, "type='email'");
+      fieldEmailRec3, MAX_FIELD_LENGTH, "type='email'");
 
   email_rec3_text_box.setValidation([](const char *value)
                                     { return validateEmail(String(value)); });
 
   WiFiManagerParameter email_rec4_text_box(
       "id_email_rec4", "Email de destino 4",
-      fieldEmailRec4, 50, "type='email'");
+      fieldEmailRec4, MAX_FIELD_LENGTH, "type='email'");
 
   email_rec4_text_box.setValidation([](const char *value)
                                     { return validateEmail(String(value)); });
 
   WiFiManagerParameter email_rec5_text_box(
       "id_email_rec5", "Email de destino 5",
-      fieldEmailRec5, 50, "type='email'");
+      fieldEmailRec5, MAX_FIELD_LENGTH, "type='email'");
 
   email_rec5_text_box.setValidation([](const char *value)
                                     { return validateEmail(String(value)); });
@@ -315,13 +329,13 @@ bool TempMonitorConfig::begin(bool forceConfig)
   {
     fieldUmbMax = atoff(umb_max_text_box.getValue());
     fieldUmbMin = atoff(umb_min_text_box.getValue());
-    strncpy(fieldEmailSender, email_sender_text_box.getValue(), sizeof(fieldEmailSender));
-    strncpy(fieldPassEmailSender, pass_email_sender_text_box.getValue(), sizeof(fieldPassEmailSender));
-    strncpy(fieldEmailRec1, email_rec1_text_box.getValue(), sizeof(fieldEmailRec1));
-    strncpy(fieldEmailRec2, email_rec2_text_box.getValue(), sizeof(fieldEmailRec2));
-    strncpy(fieldEmailRec3, email_rec3_text_box.getValue(), sizeof(fieldEmailRec3));
-    strncpy(fieldEmailRec4, email_rec4_text_box.getValue(), sizeof(fieldEmailRec4));
-    strncpy(fieldEmailRec5, email_rec5_text_box.getValue(), sizeof(fieldEmailRec5));
+    strlcpy(fieldEmailSender, email_sender_text_box.getValue(), sizeof(fieldEmailSender));
+    strlcpy(fieldPassEmailSender, pass_email_sender_text_box.getValue(), sizeof(fieldPassEmailSender));
+    strlcpy(fieldEmailRec1, email_rec1_text_box.getValue(), sizeof(fieldEmailRec1));
+    strlcpy(fieldEmailRec2, email_rec2_text_box.getValue(), sizeof(fieldEmailRec2));
+    strlcpy(fieldEmailRec3, email_rec3_text_box.getValue(), sizeof(fieldEmailRec3));
+    strlcpy(fieldEmailRec4, email_rec4_text_box.getValue(), sizeof(fieldEmailRec4));
+    strlcpy(fieldEmailRec5, email_rec5_text_box.getValue(), sizeof(fieldEmailRec5));
     if (String(fieldEmailSender).length() == 0 ||
         String(fieldPassEmailSender).length() == 0 ||
         !(
