@@ -4,11 +4,13 @@
 #include <Arduino.h>
 #include <HTTPClient.h>
 #include <ArduinoJson.h>
+#include "secrets.h"
 
 class SendTempTask
 {
 private:
-    const char* serverUrl = "http://your-api.com/data";
+    const char *tableN = "temperatures";
+    const String endpoint = String(serverUrl) + "/rest/v1/" + tableN;
 
     bool sendTemperatureData(float temperature);
 
@@ -18,7 +20,7 @@ private:
     TaskHandle_t taskHandle;
     int frecuenciaMuestreo;
 
-    static void taskFunction(void* parameter);
+    static void taskFunction(void *parameter);
 
 public:
     SendTempTask();

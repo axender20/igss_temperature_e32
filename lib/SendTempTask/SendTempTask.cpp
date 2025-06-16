@@ -34,13 +34,14 @@ void SendTempTask::taskFunction(void *parameter)
 bool SendTempTask::sendTemperatureData(float temperature)
 {
     HTTPClient http;
-    http.begin(serverUrl);
-    http.addHeader("Authorization", "Bearer your-api-key");
+    http.begin(endpoint);
+    http.addHeader("Authorization", "Bearer " + String(apiKey));
+    http.addHeader("apiKey", apiKey);
     http.addHeader("Content-Type", "application/json");
 
     JsonDocument doc;
-    doc["t"] = temperature;
-    // doc["device_id"] = "ESP32_TEMP_001";
+    doc["temperature"] = temperature;
+    doc["device_id"] = "device_id";
 
     String jsonString;
     serializeJson(doc, jsonString);
