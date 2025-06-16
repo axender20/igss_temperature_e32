@@ -1,7 +1,13 @@
 #include "SendTempTask.h"
 
 SendTempTask::SendTempTask() : taskHandle(NULL),
-                               frecuenciaMuestreo(0) {}
+                               frecuenciaMuestreo(0)
+{
+    uint8_t mac[6];
+    WiFi.macAddress(mac);
+    snprintf(deviceId, sizeof(deviceId), "%02X:%02X:%02X:%02X:%02X:%02X",
+             mac[0], mac[1], mac[2], mac[3], mac[4], mac[5]);
+}
 
 void SendTempTask::taskFunction(void *parameter)
 {
@@ -35,13 +41,13 @@ bool SendTempTask::sendTemperatureData(float temperature)
 {
     HTTPClient http;
     http.begin(endpoint);
-    http.addHeader("Authorization", "Bearer " + String(apiKey));
-    http.addHeader("apiKey", apiKey);
+    http.addHeader("Authorization", "Bearer " + String(API_KEY));
+    http.addHeader("apiKey", API_KEY);
     http.addHeader("Content-Type", "application/json");
 
     JsonDocument doc;
     doc["temperature"] = temperature;
-    doc["device_id"] = "device_id";
+    doc["device_id"] = deviceId;
 
     String jsonString;
     serializeJson(doc, jsonString);
