@@ -9,7 +9,7 @@
 class SendTempTask
 {
 private:
-    const char *tableN = "temperatures";
+    const char *tableN = "data_device";
     const String endpoint = String(SERVER_URL) + "/rest/v1/" + tableN;
     char deviceId[18];
     bool sendTemperatureData(float temperature);

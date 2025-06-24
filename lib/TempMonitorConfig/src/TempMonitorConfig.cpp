@@ -154,11 +154,10 @@ void TempMonitorConfig::configModeCallback(WiFiManager *myWiFiManager)
   Serial.println(WiFi.softAPIP());
 }
 
-bool TempMonitorConfig::begin()
+bool TempMonitorConfig::begin(bool forceConfig)
 {
   WiFi.mode(WIFI_STA);
-  bool forceConfig = true; // debug only
-  // bool forceConfig = false;
+  // forceConfig = true; // debug only
 
   if (!loadConfigFile())
   {

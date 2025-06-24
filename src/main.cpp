@@ -1,14 +1,26 @@
 #include <Arduino.h>
 #include "TempMonitorConfig.h"
 #include "SendTempTask.h"
+
+#define CONFIG_BUTTON_PIN 15
+
 TempMonitorConfig config;
 SendTempTask sendTask;
 
+void IRAM_ATTR handleButtonPress()
+{
+    ESP.restart();
+}
+
 void setup()
 {
+    pinMode(CONFIG_BUTTON_PIN, INPUT_PULLUP);
+    delay(100);
+    bool needConfig = (digitalRead(CONFIG_BUTTON_PIN) == LOW);
+    
     Serial.begin(115200);
 
-    if (!config.begin())
+    if (!config.begin(needConfig))
     {
         Serial.println("Failed to configure WiFi");
         delay(3000);
@@ -25,6 +37,8 @@ void setup()
         ESP.restart();
         delay(3000);
     }
+
+    attachInterrupt(digitalPinToInterrupt(CONFIG_BUTTON_PIN), handleButtonPress, FALLING);
 }
 
 void loop()
