@@ -12,28 +12,47 @@ SendTempTask::SendTempTask() : taskHandle(NULL),
 void SendTempTask::taskFunction(void *parameter)
 {
     SendTempTask *task = (SendTempTask *)parameter;
-    const TickType_t delayTicks = pdMS_TO_TICKS((uint32_t)task->frecuenciaMuestreo * 1000);
-
+    const uint32_t delayMsSeg = 1000;
+    const int delayFrecM = (int)task->frecuenciaMuestreo;
+    int secondsToPass = 0;
     while (true)
     {
-        // lectura de temperatura
-        float temperature = random(20, 30) + (random(0, 100) / 100.0);
-        Serial.printf("Temperatura: %.2f°C\n", temperature);
+        delay_frms(delayMsSeg);
+        secondsToPass++;
 
-        if (task->sendTemperatureData(temperature))
+        if (secondsToPass >= delayFrecM)
         {
-            Serial.println("Datos enviados correctamente");
-        }
-        else
-        {
-            Serial.println("Error al enviar datos");
-        }
+            // lectura de temperatura
+            // float temperature = random(20, 30) + (random(0, 100) / 100.0);
+            float temperature = 0.0f;
+            if (task->readTemperatureFunc)
+            {
+                temperature = task->readTemperatureFunc();
+                temperature = roundf(temperature * 100.0f) / 100.0f;
+            }
+            else
+            {
+                Serial.println("No hay función de lectura de temperatura definida.");
+                delay_frms(delayMsSeg);
+                continue;
+            }
+            Serial.printf("Temperatura: %.2f°C\n", temperature);
 
-        Serial.printf("Stack libre: %d words\n", uxTaskGetStackHighWaterMark(NULL));
-        Serial.println();
-        Serial.println();
+            if (task->sendTemperatureData(temperature))
+            {
+                Serial.println("Datos enviados correctamente");
+            }
+            else
+            {
+                Serial.println("Error al enviar datos");
+            }
 
-        vTaskDelay(delayTicks);
+            Serial.printf("Stack libre: %d words\n", uxTaskGetStackHighWaterMark(NULL));
+            Serial.println();
+            Serial.println();
+
+            secondsToPass = 0;
+        }
     }
 }
 

@@ -4,6 +4,7 @@
 #include <Arduino.h>
 #include <HTTPClient.h>
 #include <ArduinoJson.h>
+#include "freertos_delay.h"
 #include "secrets.h"
 
 class SendTempTask
@@ -21,12 +22,17 @@ private:
     int frecuenciaMuestreo;
 
     static void taskFunction(void *parameter);
+    std::function<float(void)> readTemperatureFunc;
 
 public:
     SendTempTask();
     bool begin(int frecMuestreo);
     void stop();
     bool isRunning();
+    void setReadTemperatureFunction(std::function<float(void)> func)
+    {
+        readTemperatureFunc = func;
+    };
 };
 
 #endif

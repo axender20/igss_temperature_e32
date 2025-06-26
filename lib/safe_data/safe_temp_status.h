@@ -3,7 +3,7 @@
 #define _SAFE_TEMPERATURE_STATUS_H_
 
 #include "Arduino.h"
-#include "semphr.h"
+#include <freertos/semphr.h>
 
 class SafeTemperatureStatus {
 private:

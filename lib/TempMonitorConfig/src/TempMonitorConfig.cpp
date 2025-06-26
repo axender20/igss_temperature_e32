@@ -157,7 +157,7 @@ void TempMonitorConfig::configModeCallback(WiFiManager *myWiFiManager)
 bool TempMonitorConfig::begin(bool forceConfig)
 {
   WiFi.mode(WIFI_STA);
-  // forceConfig = true; // debug only
+  //forceConfig = true; // debug only
 
   if (!loadConfigFile())
   {

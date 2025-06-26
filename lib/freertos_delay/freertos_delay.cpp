@@ -1,6 +1,6 @@
 #include "freertos_delay.h"
 #include "Arduino.h"
-#include "task.h"
+#include <freertos/task.h>
 
 #define TICKS_PER_MS configTICK_RATE_HZ / 1000
 
