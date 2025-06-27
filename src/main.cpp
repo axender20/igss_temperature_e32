@@ -7,11 +7,10 @@
 #include "shared_temperature_status.h"
 
 #if defined(ESP32_S3_DEVKITM_1)
-  #define CONFIG_BUTTON_PIN 37
+#define CONFIG_BUTTON_PIN 37
 #elif defined(ESP_CAM)
-  #define CONFIG_BUTTON_PIN 15
+#define CONFIG_BUTTON_PIN 15
 #endif
-
 
 TempMonitorConfig config;
 SendTempTask sendTask;
@@ -24,7 +23,7 @@ void IRAM_ATTR handleButtonPress()
 void setup()
 {
     pinMode(CONFIG_BUTTON_PIN, INPUT_PULLUP);
-    delay(100);
+    delay(1000);
     bool needConfig = (digitalRead(CONFIG_BUTTON_PIN) == LOW);
 
     Serial.begin(115200);
@@ -51,10 +50,11 @@ void setup()
         1,
         NULL);
 
-    sendTask.setReadTemperatureFunction([](){
-        // return random(20, 30) + (random(0, 100) / 100.0);
-        return sh_temperarute_status.get_average();
-    });
+    sendTask.setReadTemperatureFunction([]()
+                                        {
+                                            //return random(20, 30) + (random(0, 100) / 100.0);
+                                            return sh_temperarute_status.get_average();
+                                        });
     if (!sendTask.begin(config.getFrecMuestreo()))
     {
         Serial.print("Fallo al iniciar tarea de envio");

@@ -1,4 +1,6 @@
 #include "TempMonitorConfig.h"
+#include <ESP_Mail_Const.h>
+#include "EmailSender.h"
 
 const char *TempMonitorConfig::JSON_CONFIG_FILE = "/mConf.json";
 
@@ -44,8 +46,6 @@ TempMonitorConfig::TempMonitorConfig() : fieldAlertsActive(false),
                                          fieldUmbMax(0),
                                          fieldUmbMin(0)
 {
-  strcpy(fieldEmailSender, "user@example.com");
-  strcpy(fieldPassEmailSender, "*****");
   strcpy(fieldEmailRec1, "user@example.com");
   strcpy(fieldEmailRec2, "");
   strcpy(fieldEmailRec3, "");
@@ -65,8 +65,6 @@ void TempMonitorConfig::saveConfigFile()
   {
     json["umbMax"] = fieldUmbMax;
     json["umbMin"] = fieldUmbMin;
-    json["emailSender"] = fieldEmailSender;
-    json["passEmailSender"] = fieldPassEmailSender;
     json["emailRec1"] = fieldEmailRec1;
     json["emailRec2"] = fieldEmailRec2;
     json["emailRec3"] = fieldEmailRec3;
@@ -74,7 +72,7 @@ void TempMonitorConfig::saveConfigFile()
     json["emailRec5"] = fieldEmailRec5;
   }
 
-  File configFile = SPIFFS.open(JSON_CONFIG_FILE, "w");
+  File configFile = LittleFS.open(JSON_CONFIG_FILE, "w");
   if (!configFile)
   {
     Serial.println("Failed to open config file for writing");
@@ -92,20 +90,20 @@ void TempMonitorConfig::saveConfigFile()
 bool TempMonitorConfig::loadConfigFile()
 {
   // uncomment if we need to format filesystem
-  // SPIFFS.format();
-  if (!SPIFFS.begin(false) && !SPIFFS.begin(true))
+  // LittleFS.format();
+  if (!LittleFS.begin(false) && !LittleFS.begin(true))
   {
     Serial.println("Failed to mount FS");
     return false;
   }
 
-  if (!SPIFFS.exists(JSON_CONFIG_FILE))
+  if (!LittleFS.exists(JSON_CONFIG_FILE))
   {
     Serial.println("Config file not found");
     return false;
   }
 
-  File configFile = SPIFFS.open(JSON_CONFIG_FILE, "r");
+  File configFile = LittleFS.open(JSON_CONFIG_FILE, "r");
   if (!configFile)
   {
     Serial.println("Failed to open config file");
@@ -134,8 +132,6 @@ bool TempMonitorConfig::loadConfigFile()
     fieldUmbMin = json["umbMin"].as<float>();
     if (isnan(fieldUmbMin))
       fieldUmbMin = 0.0f;
-    strcpy(fieldEmailSender, json["emailSender"] | "user@example.com");
-    strcpy(fieldPassEmailSender, json["passEmailSender"] | "*****");
     strcpy(fieldEmailRec1, json["emailRec1"] | "user@example.com");
     strcpy(fieldEmailRec2, json["emailRec2"] | "");
     strcpy(fieldEmailRec3, json["emailRec3"] | "");
@@ -174,6 +170,7 @@ bool TempMonitorConfig::begin(bool forceConfig)
 
   WiFiManagerParameter sep_br("<br>");
   WiFiManagerParameter sep_hr("<hr>");
+  WiFiManagerParameter p_send_mail_alerts("<p>Si las alertas estan activas se enviara correos de prueba a los destinatarios.</p>");
 
   // frecuencia de muestreo
   char frecConvertedValue[6];
@@ -235,24 +232,6 @@ bool TempMonitorConfig::begin(bool forceConfig)
                                             }
                                             return String(""); });
 
-  WiFiManagerParameter email_sender_text_box(
-      "id_email_sender", "Email de origen",
-      fieldEmailSender, MAX_FIELD_LENGTH, "type='email'");
-
-  email_sender_text_box.setValidation([](const char *value)
-                                      { return validateEmail(String(value)); });
-
-  WiFiManagerParameter pass_email_sender_text_box(
-      "id_pass_email_sender", "Contraseña email de origen",
-      fieldPassEmailSender, MAX_FIELD_LENGTH);
-  pass_email_sender_text_box.setValidation([](const char *value)
-                                           { 
-                                              if (String(value).length() >= MAX_FIELD_LENGTH)
-                                              {
-                                                return String("Demasiados caracteres ingresados");
-                                              }
-                                              return String(""); });
-
   WiFiManagerParameter email_rec1_text_box(
       "id_email_rec1", "Email de destino 1",
       fieldEmailRec1, MAX_FIELD_LENGTH, "type='email'");
@@ -295,14 +274,14 @@ bool TempMonitorConfig::begin(bool forceConfig)
   wm.addParameter(&sep_br);
   wm.addParameter(&umb_max_text_box);
   wm.addParameter(&umb_min_text_box);
-  wm.addParameter(&email_sender_text_box);
-  wm.addParameter(&pass_email_sender_text_box);
   wm.addParameter(&sep_br);
   wm.addParameter(&email_rec1_text_box);
   wm.addParameter(&email_rec2_text_box);
   wm.addParameter(&email_rec3_text_box);
   wm.addParameter(&email_rec4_text_box);
   wm.addParameter(&email_rec5_text_box);
+  wm.addParameter(&sep_br);
+  wm.addParameter(&p_send_mail_alerts);
   wm.setTitle("Configuración Monitor de Temperatura");
 
   bool connected;
@@ -321,6 +300,15 @@ bool TempMonitorConfig::begin(bool forceConfig)
     return false;
   }
 
+  Serial.println("Waiting for NTP server time reading");
+  configTime(0, 0, "pool.ntp.org", "time.nist.gov");
+  while (time(nullptr) < ESP_MAIL_CLIENT_VALID_TS)
+  {
+    delay(100);
+  }
+
+  EmailSender &emailSender = EmailSender::getInstance();
+  emailSender.clearRecipients();
   // Procesar los valores ingresados
   fieldFrecMuestreo = atoi(frec_muestreo_text_box.getValue());
   fieldAlertsActive = (strncmp(alert_active_checkbox.getValue(), "C", 1) == 0);
@@ -328,16 +316,12 @@ bool TempMonitorConfig::begin(bool forceConfig)
   {
     fieldUmbMax = atoff(umb_max_text_box.getValue());
     fieldUmbMin = atoff(umb_min_text_box.getValue());
-    strlcpy(fieldEmailSender, email_sender_text_box.getValue(), sizeof(fieldEmailSender));
-    strlcpy(fieldPassEmailSender, pass_email_sender_text_box.getValue(), sizeof(fieldPassEmailSender));
     strlcpy(fieldEmailRec1, email_rec1_text_box.getValue(), sizeof(fieldEmailRec1));
     strlcpy(fieldEmailRec2, email_rec2_text_box.getValue(), sizeof(fieldEmailRec2));
     strlcpy(fieldEmailRec3, email_rec3_text_box.getValue(), sizeof(fieldEmailRec3));
     strlcpy(fieldEmailRec4, email_rec4_text_box.getValue(), sizeof(fieldEmailRec4));
     strlcpy(fieldEmailRec5, email_rec5_text_box.getValue(), sizeof(fieldEmailRec5));
-    if (String(fieldEmailSender).length() == 0 ||
-        String(fieldPassEmailSender).length() == 0 ||
-        !(
+    if (!(
             String(fieldEmailRec1).length() != 0 ||
             String(fieldEmailRec2).length() != 0 ||
             String(fieldEmailRec3).length() != 0 ||
@@ -346,10 +330,32 @@ bool TempMonitorConfig::begin(bool forceConfig)
     {
       fieldAlertsActive = false;
     }
-  }
+    else
+    {
+      if (String(fieldEmailRec1).length() > 0)
+        emailSender.addRecipient(fieldEmailRec1);
 
+      if (String(fieldEmailRec2).length() > 0)
+        emailSender.addRecipient(fieldEmailRec2);
+
+      if (String(fieldEmailRec3).length() > 0)
+        emailSender.addRecipient(fieldEmailRec3);
+
+      if (String(fieldEmailRec4).length() > 0)
+        emailSender.addRecipient(fieldEmailRec4);
+
+      if (String(fieldEmailRec5).length() > 0)
+        emailSender.addRecipient(fieldEmailRec5);
+    }
+  }
   if (shouldSaveConfig)
   {
+    if (fieldAlertsActive)
+    {
+      emailSender.sendMail(
+          "Correo de prueba",
+          "Este es un correo de prueba configurado desde el sensor de temperatura, si recibe este correo indica que la configuración fue exitosa");
+    }
     saveConfigFile();
   }
 
