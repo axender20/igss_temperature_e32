@@ -19,7 +19,7 @@ void task_handler_rtemperature();
 
 void thread_handler_rtemperature(void* parametres) {
   //? Intervalo del thread (1 tick)
-  static TickType_t lw_thread_rtemp, interval_thread_rtemp = 1000;
+  static TickType_t lw_thread_rtemp, interval_thread_rtemp = 1;
 
   BaseType_t delayed;
   lw_thread_rtemp = xTaskGetTickCount();
@@ -34,6 +34,7 @@ void thread_handler_rtemperature(void* parametres) {
 }
 
 void init_handler_rtemperature() {
+  sh_temperarute_status.init();
   temperature_sensor::init();
   audible_alarm::init();
   ESP_LOGI(TAG, "Handler temperature initializate");

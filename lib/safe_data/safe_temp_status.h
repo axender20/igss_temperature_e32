@@ -2,12 +2,10 @@
 #ifndef _SAFE_TEMPERATURE_STATUS_H_
 #define _SAFE_TEMPERATURE_STATUS_H_
 
-#include "Arduino.h"
-#include "semphr.h"
+#include "safe_base.h"
 
-class SafeTemperatureStatus {
+class SafeTemperatureStatus : public SafeBase {
 private:
-  SemaphoreHandle_t _sempx;
   float _raw_temp;
   bool _alarm;
 
@@ -15,13 +13,17 @@ private:
   float _avrg_temp;
   uint16_t _avg_count;
 
-  void semph_take();
-  void semph_give();
 public:
-  SafeTemperatureStatus() {};
-  ~SafeTemperatureStatus() {};
+  SafeTemperatureStatus() = default;
+  ~SafeTemperatureStatus() = default;
 
-  bool init();
+  bool init() override {
+    _alarm = false;
+    _raw_temp = 0.0f;
+    _avrg_temp = 0.0f;
+    _avg_count = 0u;
+    return SafeBase::init();
+  }
 
   float get_average(bool reset = true);
   float get_raw()const { return _raw_temp; }

@@ -19,4 +19,10 @@ constexpr uint8_t led_strip_pin = 38u;
 
 //> Pin para el buzzer
 constexpr uint8_t s_buzzer_pin = 15u;
+
+//> Pin para lectura de la bateria 
+constexpr uint8_t b_battery_adc = 1u;
+constexpr uint8_t b_battery_charg = 4u;
+
+
 #endif
