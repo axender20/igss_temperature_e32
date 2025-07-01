@@ -1,7 +1,9 @@
 #include "TempMonitorConfig.h"
 #include <ESP_Mail_Const.h>
 #include "EmailSender.h"
+#if defined(ESP32_S3_DEVKITM_1)
 #include <rgb_led.h>
+#endif
 
 const char *TempMonitorConfig::JSON_CONFIG_FILE = "/mConf.json";
 
@@ -153,7 +155,11 @@ void TempMonitorConfig::configModeCallback(WiFiManager *myWiFiManager)
 
 bool TempMonitorConfig::begin(bool forceConfig)
 {
+
+#if defined(ESP32_S3_DEVKITM_1)
   wrgb_1.switch_color(0, 0, 255);
+#endif
+
   WiFi.mode(WIFI_STA);
   // forceConfig = true; // debug only
 
@@ -167,6 +173,12 @@ bool TempMonitorConfig::begin(bool forceConfig)
 
   wm.setSaveConfigCallback([this]()
                            { this->shouldSaveConfig = true; });
+  std::vector<const char *> menu = {"wifi", "info", "sep", "exit"};
+  wm.setMenu(menu);
+  wm.setShowInfoUpdate(false);
+
+  // set dark theme
+  wm.setClass("invert");
 
   wm.setAPCallback(configModeCallback);
 
@@ -308,9 +320,10 @@ bool TempMonitorConfig::begin(bool forceConfig)
   configTime(0, 0, "pool.ntp.org", "time.nist.gov");
   while (time(nullptr) < ESP_MAIL_CLIENT_VALID_TS)
   {
-    if (millis() - start > ntpTimeout) {
-        Serial.println("NTP timeout, continuando sin hora válida.");
-        break;
+    if (millis() - start > ntpTimeout)
+    {
+      Serial.println("NTP timeout, continuando sin hora válida.");
+      break;
     }
     delay(100);
   }
@@ -360,14 +373,27 @@ bool TempMonitorConfig::begin(bool forceConfig)
   {
     if (fieldAlertsActive)
     {
+      String body = "Este es un correo de prueba configurado desde el sensor de temperatura, si recibe este correo indica que la configuración fue exitosa\n";
+      body += "MAC del dispositivo: ";
+      char macId[18];
+      uint8_t mac[6];
+      WiFi.macAddress(mac);
+      sprintf(macId, "%02X:%02X:%02X:%02X:%02X:%02X",
+              mac[0], mac[1], mac[2], mac[3], mac[4], mac[5]);
+      body += macId;
+      body += "\n";
+      body += "Fecha/hora: #esp_mail_current_time\n";
+
       emailSender.sendMail(
           "Correo de prueba",
-          "Este es un correo de prueba configurado desde el sensor de temperatura, si recibe este correo indica que la configuración fue exitosa");
+          body);
     }
     saveConfigFile();
   }
 
-  wrgb_1.off();
+#if defined(ESP32_S3_DEVKITM_1)
+  wrgb_1.switch_color(0, 0, 255);
+#endif
 
   return true;
 }
