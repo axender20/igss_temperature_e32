@@ -1,15 +1,24 @@
-#define CORE_DEBUG_LEVEL ARDUHAL_LOG_LEVEL_INFO
 #include <Arduino.h>
 #include "TempMonitorConfig.h"
 #include "SendTempTask.h"
 #include "temperature_sensor.h"
 #include "handler_rtemperature.h"
-#include "shared_temperature_status.h"
+#include <time.h>
+
+// void printCurrentTime() {
+//     time_t now = time(nullptr);
+//     struct tm timeinfo;
+//     localtime_r(&now, &timeinfo);
+//     char buffer[30];
+//     strftime(buffer, sizeof(buffer), "%Y-%m-%d %H:%M:%S", &timeinfo);
+//     Serial.print("Hora actual: ");
+//     Serial.println(buffer);
+// }
 
 #if defined(ESP32_S3_DEVKITM_1)
 #define CONFIG_BUTTON_PIN 37
 #elif defined(ESP_CAM)
-#define CONFIG_BUTTON_PIN 15
+#define CONFIG_BUTTON_PIN 13
 #endif
 
 TempMonitorConfig config;
@@ -39,8 +48,10 @@ void setup()
     Serial.println("WiFi connected");
     Serial.print("IP address: ");
     Serial.println(WiFi.localIP());
-
-    init_handler_rtemperature();
+    
+    const float umbMax = config.getAlertsActive() ? config.getUmbMax() : 150.0f;
+    const float umbMin = config.getAlertsActive() ? config.getUmbMin() : -40.0f;
+    init_handler_rtemperature(umbMax, umbMin);
 
     xTaskCreate(
         thread_handler_rtemperature,
@@ -50,12 +61,7 @@ void setup()
         1,
         NULL);
 
-    sendTask.setReadTemperatureFunction([]()
-                                        {
-                                            //return random(20, 30) + (random(0, 100) / 100.0);
-                                            return sh_temperarute_status.get_average();
-                                        });
-    if (!sendTask.begin(config.getFrecMuestreo()))
+    if (!sendTask.begin(config.getFrecMuestreo(), config.getAlertsActive()))
     {
         Serial.print("Fallo al iniciar tarea de envio");
         ESP.restart();

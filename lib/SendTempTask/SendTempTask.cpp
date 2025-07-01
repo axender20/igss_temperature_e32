@@ -1,7 +1,10 @@
 #include "SendTempTask.h"
+#include <shared_temperature_status.h>
+#include <EmailSender.h>
 
 SendTempTask::SendTempTask() : taskHandle(NULL),
-                               frecuenciaMuestreo(0)
+                               frecuenciaMuestreo(0),
+                               alertsActive(false)
 {
     uint8_t mac[6];
     WiFi.macAddress(mac);
@@ -14,28 +17,21 @@ void SendTempTask::taskFunction(void *parameter)
     SendTempTask *task = (SendTempTask *)parameter;
     const uint32_t delayMsSeg = 1000;
     const int delayFrecM = (int)task->frecuenciaMuestreo;
-    int secondsToPass = 0;
+    int secondsToPassFM = 0;
+    static unsigned long lastEmailSent = 0;
+    const unsigned long emailCooldown = 180000; // 180 segundos (3 minutos) en ms
+    const bool _alertsActive = task->alertsActive;
     while (true)
     {
         delay_frms(delayMsSeg);
-        secondsToPass++;
+        secondsToPassFM++;
 
-        if (secondsToPass >= delayFrecM)
+        if (secondsToPassFM >= delayFrecM)
         {
             // lectura de temperatura
             // float temperature = random(20, 30) + (random(0, 100) / 100.0);
-            float temperature = 0.0f;
-            if (task->readTemperatureFunc)
-            {
-                temperature = task->readTemperatureFunc();
-                temperature = roundf(temperature * 100.0f) / 100.0f;
-            }
-            else
-            {
-                Serial.println("No hay función de lectura de temperatura definida.");
-                delay_frms(delayMsSeg);
-                continue;
-            }
+            float temperature = sh_temperarute_status.get_average();
+            
             Serial.printf("Temperatura: %.2f°C\n", temperature);
 
             if (task->sendTemperatureData(temperature))
@@ -51,7 +47,26 @@ void SendTempTask::taskFunction(void *parameter)
             Serial.println();
             Serial.println();
 
-            secondsToPass = 0;
+            secondsToPassFM = 0;
+        }
+        if (_alertsActive && sh_temperarute_status.get_alarm())
+        {
+            unsigned long now = millis();
+            if (now - lastEmailSent >= emailCooldown)
+            {
+                float raw_temp = sh_temperarute_status.get_raw();
+                String subject = "¡Alerta de temperatura!";
+                String body = "Se ha detectado una temperatura fuera de rango.\n";
+                body += "Temperatura actual: ";
+                body += String(raw_temp, 2);
+                body += " °C\n";
+                body += "MAC del dispositivo: ";
+                body += task->deviceId;
+                body += "\n";
+                body += "Fecha/hora: #esp_mail_current_time\n";
+                EmailSender::getInstance().sendMail(subject, body);
+                lastEmailSent = now;
+            }
         }
     }
 }
@@ -60,7 +75,9 @@ bool SendTempTask::sendTemperatureData(float temperature)
 {
     HTTPClient http;
     http.begin(endpoint);
-    http.addHeader("Authorization", "Bearer " + String(API_KEY));
+    String authHeader = "Bearer ";
+    authHeader += API_KEY;
+    http.addHeader("Authorization", authHeader);
     http.addHeader("apiKey", API_KEY);
     http.addHeader("Content-Type", "application/json");
 
@@ -104,7 +121,7 @@ bool SendTempTask::sendTemperatureData(float temperature)
     return success;
 }
 
-bool SendTempTask::begin(int frecMuestreo)
+bool SendTempTask::begin(int frecMuestreo, bool alertasActivas)
 {
     if (taskHandle != NULL)
     {
@@ -112,6 +129,7 @@ bool SendTempTask::begin(int frecMuestreo)
     }
 
     frecuenciaMuestreo = frecMuestreo;
+    alertsActive = alertasActivas;
 
     BaseType_t res = xTaskCreate(
         taskFunction,

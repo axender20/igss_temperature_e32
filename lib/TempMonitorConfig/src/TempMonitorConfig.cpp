@@ -1,6 +1,7 @@
 #include "TempMonitorConfig.h"
 #include <ESP_Mail_Const.h>
 #include "EmailSender.h"
+#include <rgb_led.h>
 
 const char *TempMonitorConfig::JSON_CONFIG_FILE = "/mConf.json";
 
@@ -152,8 +153,9 @@ void TempMonitorConfig::configModeCallback(WiFiManager *myWiFiManager)
 
 bool TempMonitorConfig::begin(bool forceConfig)
 {
+  wrgb_1.switch_color(0, 0, 255);
   WiFi.mode(WIFI_STA);
-  //forceConfig = true; // debug only
+  // forceConfig = true; // debug only
 
   if (!loadConfigFile())
   {
@@ -300,10 +302,16 @@ bool TempMonitorConfig::begin(bool forceConfig)
     return false;
   }
 
+  const unsigned long ntpTimeout = 15000; // 15 segundos
+  unsigned long start = millis();
   Serial.println("Waiting for NTP server time reading");
   configTime(0, 0, "pool.ntp.org", "time.nist.gov");
   while (time(nullptr) < ESP_MAIL_CLIENT_VALID_TS)
   {
+    if (millis() - start > ntpTimeout) {
+        Serial.println("NTP timeout, continuando sin hora válida.");
+        break;
+    }
     delay(100);
   }
 
@@ -358,6 +366,8 @@ bool TempMonitorConfig::begin(bool forceConfig)
     }
     saveConfigFile();
   }
+
+  wrgb_1.off();
 
   return true;
 }

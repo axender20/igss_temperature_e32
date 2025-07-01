@@ -20,19 +20,15 @@ private:
 
     TaskHandle_t taskHandle;
     int frecuenciaMuestreo;
+    bool alertsActive;
 
     static void taskFunction(void *parameter);
-    std::function<float(void)> readTemperatureFunc;
 
 public:
     SendTempTask();
-    bool begin(int frecMuestreo);
+    bool begin(int frecMuestreo, bool alertasActivas = false);
     void stop();
     bool isRunning();
-    void setReadTemperatureFunction(std::function<float(void)> func)
-    {
-        readTemperatureFunc = func;
-    };
 };
 
 #endif

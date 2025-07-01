@@ -33,7 +33,9 @@ void thread_handler_rtemperature(void* parametres) {
   vTaskDelete(NULL);
 }
 
-void init_handler_rtemperature() {
+void init_handler_rtemperature(float high, float low) {
+  h_limit = high;
+  l_limit = low;
   temperature_sensor::init();
   audible_alarm::init();
   ESP_LOGI(TAG, "Handler temperature initializate");
