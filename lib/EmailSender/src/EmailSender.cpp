@@ -1,4 +1,9 @@
+//> Nivel de debug
+#define CORE_DEBUG_LEVEL ARDUHAL_LOG_LEVEL_VERBOSE
 #include "EmailSender.h"
+#include "esp_log.h"
+
+static const char *TAG = "email";
 
 EmailSender &EmailSender::getInstance()
 {
@@ -9,7 +14,8 @@ EmailSender &EmailSender::getInstance()
 EmailSender::EmailSender()
 {
     MailClient.networkReconnect(true);
-    smtp.debug(1); // debug only
+    // smtp.debug(1); // debug only
+    smtp.debug(0);
     session_config.server.host_name = "smtp.gmail.com";
     session_config.server.port = esp_mail_smtp_port_465;
     session_config.login.email = AUTHOR_EMAIL;
@@ -17,7 +23,7 @@ EmailSender::EmailSender()
     session_config.login.user_domain = F("127.0.0.1");
 
     smtp.callback([](SMTP_Status status)
-                  { Serial.println(status.info()); });
+                  { ESP_LOGI(TAG, "%s", status.info()); });
     smtp.setTCPTimeout(10);
 }
 
@@ -39,22 +45,22 @@ bool EmailSender::sendMail(const String &subject, const String &body)
 
     if (!smtp.connect(&session_config))
     {
-        Serial.println("No se pudo conectar al servidor SMTP");
+        ESP_LOGE(TAG, "No se pudo conectar al servidor SMTP");
         return false;
     }
     if (!smtp.isLoggedIn())
     {
-        Serial.println("No yet logged in.");
+        ESP_LOGW(TAG, "Aun no ha iniciado sesion");
     }
     else
     {
         if (smtp.isAuthenticated())
         {
-            Serial.println("Succcessfully logged in");
+            ESP_LOGI(TAG, "Inicio de sesion exitoso");
         }
         else
         {
-            Serial.println("Connected with no Auth");
+            ESP_LOGW(TAG, "Conectado sin autenticacion");
         }
     }
 
@@ -73,8 +79,8 @@ bool EmailSender::sendMail(const String &subject, const String &body)
     bool result = MailClient.sendMail(&smtp, &message);
     if (!result)
     {
-        Serial.printf("Error, Status Code: %d, Error Code: %d, Reason: %s\n",
-                      smtp.statusCode(), smtp.errorCode(), smtp.errorReason().c_str());
+        ESP_LOGE(TAG, "Error, Status Code: %d, Error Code: %d, Reason: %s",
+                 smtp.statusCode(), smtp.errorCode(), smtp.errorReason().c_str());
     }
     smtp.sendingResult.clear();
     return result;

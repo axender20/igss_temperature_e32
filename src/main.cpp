@@ -1,9 +1,15 @@
+//> Nivel de debug
+#define CORE_DEBUG_LEVEL ARDUHAL_LOG_LEVEL_VERBOSE
+
 #include <Arduino.h>
 #include "TempMonitorConfig.h"
 #include "SendTempTask.h"
 #include "temperature_sensor.h"
 #include "handler_rtemperature.h"
 #include "NtpSyncTask.h"
+#include "esp_log.h"
+
+static const char *TAG = "main";
 
 NtpSyncTask ntpTask;
 
@@ -17,14 +23,10 @@ void setup()
 
     if (!config.begin())
     {
-        Serial.println("Failed to configure WiFi");
+        ESP_LOGE(TAG, "Fallo al configurar WiFi");
         delay(3000);
         ESP.restart();
     }
-
-    Serial.println("WiFi connected");
-    Serial.print("IP address: ");
-    Serial.println(WiFi.localIP());
     
     const float umbMax = config.getAlertsActive() ? config.getUmbMax() : 150.0f;
     const float umbMin = config.getAlertsActive() ? config.getUmbMin() : -40.0f;
@@ -40,7 +42,7 @@ void setup()
 
     if (!sendTask.begin(config.getFrecMuestreo(), config.getAlertsActive()))
     {
-        Serial.print("Fallo al iniciar tarea de envio");
+        ESP_LOGE(TAG, "Fallo al iniciar tarea de envio");
         ESP.restart();
         delay(3000);
     }

@@ -1,6 +1,11 @@
+//> Nivel de debug 
+#define CORE_DEBUG_LEVEL ARDUHAL_LOG_LEVEL_VERBOSE
 #include "SendTempTask.h"
 #include <shared_temperature_status.h>
 #include <EmailSender.h>
+#include "esp_log.h"
+
+static const char *TAG = "sndtmptask";
 
 SendTempTask::SendTempTask() : taskHandle(NULL),
                                frecuenciaMuestreo(0),
@@ -31,8 +36,6 @@ void SendTempTask::taskFunction(void *parameter)
             // lectura de temperatura
             // float temperature = random(20, 30) + (random(0, 100) / 100.0);
             float temperature = sh_temperarute_status.get_average();
-
-            Serial.printf("Temperatura: %.2f°C\n", temperature);
 
             task->sendTemperatureData(temperature);
             // Serial.printf("Stack libre: %d words\n", uxTaskGetStackHighWaterMark(NULL));
@@ -90,25 +93,26 @@ bool SendTempTask::sendTemperatureData(float temperature)
         success = true;
         break;
     case HTTP_CODE_UNAUTHORIZED: // 401
-        Serial.println("Error: No autorizado");
+        ESP_LOGE(TAG, "Error: No autorizado (401)");
         break;
     case HTTP_CODE_NOT_FOUND: // 404
-        Serial.println("Error: API endpoint no encontrado");
+        ESP_LOGE(TAG, "Error: API endpoint no encontrado (404)");
+        break;
+    case HTTP_CODE_CONFLICT:
+        ESP_LOGE(TAG, "Error: Conflicto de datos (409)");
         break;
     default:
-        Serial.printf("Error: Código no manejado: %d\n", httpResponseCode);
+        ESP_LOGE(TAG, "Error: Código HTTP no manejado: %d", httpResponseCode);
         break;
     }
 
     if (success)
     {
-        Serial.printf("HTTP Response code: %d\n", httpResponseCode);
-        String response = http.getString();
-        Serial.println(response);
+        ESP_LOGV(TAG, "Codigo de respuesta HTTP: %d", httpResponseCode);
     }
     else
     {
-        Serial.printf("Error code: %d\n", httpResponseCode);
+        ESP_LOGE(TAG, "Error. Código HTTP: %d", httpResponseCode);
     }
     http.end();
     return success;

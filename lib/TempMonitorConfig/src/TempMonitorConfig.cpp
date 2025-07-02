@@ -1,12 +1,17 @@
+//> Nivel de debug
+#define CORE_DEBUG_LEVEL ARDUHAL_LOG_LEVEL_VERBOSE
 #include "TempMonitorConfig.h"
 #include <ESP_Mail_Const.h>
 #include "EmailSender.h"
+#include "esp_log.h"
 #if defined(ESP32_S3_DEVKITM_1)
 #include <rgb_led.h>
 #define CONFIG_BUTTON_PIN 37
 #elif defined(ESP_CAM)
 #define CONFIG_BUTTON_PIN 13
 #endif
+
+#define TAG "tmpconfig"
 
 const char *TempMonitorConfig::JSON_CONFIG_FILE = "/mConf.json";
 
@@ -67,7 +72,7 @@ TempMonitorConfig::TempMonitorConfig() : fieldAlertsActive(false),
 
 void TempMonitorConfig::saveConfigFile()
 {
-  Serial.print(F("Saving configuration..."));
+  ESP_LOGI(TAG, "Guardando configuracion...");
 
   JsonDocument json;
   json["frecMuestreo"] = fieldFrecMuestreo;
@@ -86,14 +91,14 @@ void TempMonitorConfig::saveConfigFile()
   File configFile = LittleFS.open(JSON_CONFIG_FILE, "w");
   if (!configFile)
   {
-    Serial.println("Failed to open config file for writing");
+    ESP_LOGE(TAG, "Fallo al abrir archivo de configuración para escritura");
     return;
   }
 
   serializeJsonPretty(json, Serial);
   if (serializeJson(json, configFile) == 0)
   {
-    Serial.println(F("Failed to write to file"));
+    ESP_LOGE(TAG, "Error al escribir en el archivo");
   }
   configFile.close();
 }
@@ -104,20 +109,20 @@ bool TempMonitorConfig::loadConfigFile()
   // LittleFS.format();
   if (!LittleFS.begin(false) && !LittleFS.begin(true))
   {
-    Serial.println("Failed to mount FS");
+    ESP_LOGE(TAG, "Fallo al montar FS");
     return false;
   }
 
   if (!LittleFS.exists(JSON_CONFIG_FILE))
   {
-    Serial.println("Config file not found");
+    ESP_LOGW(TAG, "Archivo de configuracion no encontrado");
     return false;
   }
 
   File configFile = LittleFS.open(JSON_CONFIG_FILE, "r");
   if (!configFile)
   {
-    Serial.println("Failed to open config file");
+    ESP_LOGE(TAG, "Fallo al abrir archivo de configuracion");
     return false;
   }
 
@@ -127,7 +132,7 @@ bool TempMonitorConfig::loadConfigFile()
 
   if (error)
   {
-    Serial.println("Failed to parse JSON");
+    ESP_LOGE(TAG, "Error al analizar JSON");
     return false;
   }
 
@@ -154,11 +159,9 @@ bool TempMonitorConfig::loadConfigFile()
 
 void TempMonitorConfig::configModeCallback(WiFiManager *myWiFiManager)
 {
-  Serial.println("Entered configuration mode");
-  Serial.print("Config SSID: ");
-  Serial.println(myWiFiManager->getConfigPortalSSID());
-  Serial.print("Config IP Address: ");
-  Serial.println(WiFi.softAPIP());
+  ESP_LOGI(TAG, "Entered configuration mode");
+  ESP_LOGI(TAG, "Config SSID: %s", myWiFiManager->getConfigPortalSSID());
+  ESP_LOGI(TAG, "Config IP Address: %s", WiFi.softAPIP().toString().c_str());
 }
 
 bool TempMonitorConfig::begin()
@@ -172,7 +175,7 @@ bool TempMonitorConfig::begin()
 
   if (!loadConfigFile())
   {
-    Serial.println(F("Forcing config mode as there is no saved config"));
+    ESP_LOGW(TAG, "Forzando el modo de configuración ya que no hay una configuración guardada");
     forceConfig = true;
   }
 
@@ -238,8 +241,6 @@ bool TempMonitorConfig::begin()
 
   char umbMinConvertedValue[7];
   sprintf(umbMinConvertedValue, "%.2f", fieldUmbMin);
-  Serial.print("umbminconvert");
-  Serial.println(umbMinConvertedValue);
   WiFiManagerParameter umb_min_text_box(
       "id_umb_min",
       "Alerta umbral min. (°C)",
@@ -330,12 +331,14 @@ bool TempMonitorConfig::begin()
 
   if (!connected)
   {
-    Serial.println("Failed to connect");
+    ESP_LOGE(TAG, "Error al intentar conectar a WiFi");
 #if defined(ESP32_S3_DEVKITM_1)
     wrgb_1.switch_color(255, 0, 0);
 #endif
     return false;
   }
+
+  ESP_LOGV(TAG, "WiFi conectado, direccion IP: %s",  WiFi.localIP().toString().c_str());
 
   const unsigned long ntpTimeout = 15000; // 15 segundos
   unsigned long start = millis();
@@ -347,7 +350,7 @@ bool TempMonitorConfig::begin()
   {
     if (millis() - start > ntpTimeout)
     {
-      Serial.println("NTP timeout, continuando sin hora válida.");
+      ESP_LOGW(TAG, "NTP timeout, continuando sin hora válida.");
       break;
     }
     delay(100);
