@@ -31,21 +31,13 @@ void SendTempTask::taskFunction(void *parameter)
             // lectura de temperatura
             // float temperature = random(20, 30) + (random(0, 100) / 100.0);
             float temperature = sh_temperarute_status.get_average();
-            
+
             Serial.printf("Temperatura: %.2f°C\n", temperature);
 
-            if (task->sendTemperatureData(temperature))
-            {
-                Serial.println("Datos enviados correctamente");
-            }
-            else
-            {
-                Serial.println("Error al enviar datos");
-            }
-
-            Serial.printf("Stack libre: %d words\n", uxTaskGetStackHighWaterMark(NULL));
-            Serial.println();
-            Serial.println();
+            task->sendTemperatureData(temperature);
+            // Serial.printf("Stack libre: %d words\n", uxTaskGetStackHighWaterMark(NULL));
+            // Serial.println();
+            // Serial.println();
 
             secondsToPassFM = 0;
         }
@@ -66,6 +58,7 @@ void SendTempTask::taskFunction(void *parameter)
                 body += "Fecha/hora: #esp_mail_current_time\n";
                 EmailSender::getInstance().sendMail(subject, body);
                 lastEmailSent = now;
+                task->sendTemperatureData(raw_temp);
             }
         }
     }

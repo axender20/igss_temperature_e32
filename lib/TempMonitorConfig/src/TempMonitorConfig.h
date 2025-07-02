@@ -33,7 +33,7 @@ private:
 
 public:
     TempMonitorConfig();
-    bool begin(bool forceConfig = false);
+    bool begin();
 
     // Getters
     int getFrecMuestreo() const { return fieldFrecMuestreo; }

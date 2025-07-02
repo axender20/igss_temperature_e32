@@ -3,47 +3,24 @@
 #include "SendTempTask.h"
 #include "temperature_sensor.h"
 #include "handler_rtemperature.h"
-// #include <time.h>
+#include "NtpSyncTask.h"
 
-// void printCurrentTime() {
-//     time_t now = time(nullptr);
-//     struct tm timeinfo;
-//     localtime_r(&now, &timeinfo);
-//     char buffer[30];
-//     strftime(buffer, sizeof(buffer), "%Y-%m-%d %H:%M:%S", &timeinfo);
-//     Serial.print("Hora actual: ");
-//     Serial.println(buffer);
-// }
-
-#if defined(ESP32_S3_DEVKITM_1)
-#define CONFIG_BUTTON_PIN 37
-#elif defined(ESP_CAM)
-#define CONFIG_BUTTON_PIN 13
-#endif
+NtpSyncTask ntpTask;
 
 TempMonitorConfig config;
 SendTempTask sendTask;
 
-void IRAM_ATTR handleButtonPress()
-{
-    ESP.restart();
-}
-
 void setup()
 {
-    pinMode(CONFIG_BUTTON_PIN, INPUT_PULLUP);
-    delay(1000);
-    bool needConfig = (digitalRead(CONFIG_BUTTON_PIN) == LOW);
 
     Serial.begin(115200);
 
-    if (!config.begin(needConfig))
+    if (!config.begin())
     {
         Serial.println("Failed to configure WiFi");
         delay(3000);
         ESP.restart();
     }
-    // fin portal de configuracion wifi
 
     Serial.println("WiFi connected");
     Serial.print("IP address: ");
@@ -68,7 +45,8 @@ void setup()
         delay(3000);
     }
 
-    attachInterrupt(digitalPinToInterrupt(CONFIG_BUTTON_PIN), handleButtonPress, FALLING);
+    // tarea de actualizacion horaria por ntp
+    ntpTask.begin();
 }
 
 void loop()

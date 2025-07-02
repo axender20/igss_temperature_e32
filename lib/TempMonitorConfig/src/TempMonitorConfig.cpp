@@ -3,9 +3,17 @@
 #include "EmailSender.h"
 #if defined(ESP32_S3_DEVKITM_1)
 #include <rgb_led.h>
+#define CONFIG_BUTTON_PIN 37
+#elif defined(ESP_CAM)
+#define CONFIG_BUTTON_PIN 13
 #endif
 
 const char *TempMonitorConfig::JSON_CONFIG_FILE = "/mConf.json";
+
+void IRAM_ATTR handleButtonPress()
+{
+  ESP.restart();
+}
 
 String TempMonitorConfig::validateEmail(const String &email)
 {
@@ -153,12 +161,11 @@ void TempMonitorConfig::configModeCallback(WiFiManager *myWiFiManager)
   Serial.println(WiFi.softAPIP());
 }
 
-bool TempMonitorConfig::begin(bool forceConfig)
+bool TempMonitorConfig::begin()
 {
-
-#if defined(ESP32_S3_DEVKITM_1)
-  wrgb_1.switch_color(0, 0, 255);
-#endif
+  pinMode(CONFIG_BUTTON_PIN, INPUT_PULLUP);
+  delay(1000);
+  bool forceConfig = (digitalRead(CONFIG_BUTTON_PIN) == LOW);
 
   WiFi.mode(WIFI_STA);
   // forceConfig = true; // debug only
@@ -299,25 +306,43 @@ bool TempMonitorConfig::begin(bool forceConfig)
   wm.setTitle("Configuración Monitor de Temperatura");
 
   bool connected;
+  uint8_t mac[6];
+  WiFi.macAddress(mac);
+  char apNameDevice[32];
+  sprintf(apNameDevice, "SG_TEMP_%02X%02X%02X", mac[3], mac[4], mac[5]);
   if (forceConfig)
   {
-    connected = wm.startConfigPortal("SG-TEMP-4528");
+#if defined(ESP32_S3_DEVKITM_1)
+    wrgb_1.switch_color(0, 255, 255);
+#endif
+    delay(3000);
+    attachInterrupt(digitalPinToInterrupt(CONFIG_BUTTON_PIN), handleButtonPress, FALLING);
+    connected = wm.startConfigPortal(apNameDevice);
   }
   else
   {
-    connected = wm.autoConnect("SG-TEMP-4528");
+#if defined(ESP32_S3_DEVKITM_1)
+    wrgb_1.switch_color(0, 0, 255);
+#endif
+    connected = wm.autoConnect(apNameDevice);
+    attachInterrupt(digitalPinToInterrupt(CONFIG_BUTTON_PIN), handleButtonPress, FALLING);
   }
 
   if (!connected)
   {
     Serial.println("Failed to connect");
+#if defined(ESP32_S3_DEVKITM_1)
+    wrgb_1.switch_color(255, 0, 0);
+#endif
     return false;
   }
 
   const unsigned long ntpTimeout = 15000; // 15 segundos
   unsigned long start = millis();
-  Serial.println("Waiting for NTP server time reading");
   configTime(0, 0, "pool.ntp.org", "time.nist.gov");
+#if defined(ESP32_S3_DEVKITM_1)
+  wrgb_1.switch_color(0, 200, 0);
+#endif
   while (time(nullptr) < ESP_MAIL_CLIENT_VALID_TS)
   {
     if (millis() - start > ntpTimeout)
@@ -327,6 +352,8 @@ bool TempMonitorConfig::begin(bool forceConfig)
     }
     delay(100);
   }
+  setenv("TZ", "CST6", 1);
+  tzset();
 
   EmailSender &emailSender = EmailSender::getInstance();
   emailSender.clearRecipients();
@@ -392,7 +419,7 @@ bool TempMonitorConfig::begin(bool forceConfig)
   }
 
 #if defined(ESP32_S3_DEVKITM_1)
-  wrgb_1.switch_color(0, 0, 255);
+  wrgb_1.off();
 #endif
 
   return true;

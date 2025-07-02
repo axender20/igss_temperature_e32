@@ -66,7 +66,7 @@ bool EmailSender::sendMail(const String &subject, const String &body)
         message.addRecipient("Destinatario", email);
     }
     message.timestamp.tag = "#esp_mail_current_time";
-    message.timestamp.format = "%B %d, %Y %H:%M:%S";
+    message.timestamp.format = "%d-%m-%Y %H:%M:%S";
     message.subject = subject;
     message.text.content = body.c_str();
 
