@@ -166,6 +166,10 @@ void TempMonitorConfig::configModeCallback(WiFiManager *myWiFiManager)
 
 bool TempMonitorConfig::begin()
 {
+#if defined(ESP32_S3_DEVKITM_1)
+  init_rgb_strip();
+#endif
+
   pinMode(CONFIG_BUTTON_PIN, INPUT_PULLUP);
   delay(1000);
   bool forceConfig = (digitalRead(CONFIG_BUTTON_PIN) == LOW);
@@ -316,7 +320,7 @@ bool TempMonitorConfig::begin()
 #if defined(ESP32_S3_DEVKITM_1)
     wrgb_1.switch_color(0, 255, 255);
 #endif
-    delay(3000);
+    delay(4000);
     attachInterrupt(digitalPinToInterrupt(CONFIG_BUTTON_PIN), handleButtonPress, FALLING);
     connected = wm.startConfigPortal(apNameDevice);
   }
@@ -325,8 +329,9 @@ bool TempMonitorConfig::begin()
 #if defined(ESP32_S3_DEVKITM_1)
     wrgb_1.switch_color(0, 0, 255);
 #endif
-    connected = wm.autoConnect(apNameDevice);
+    delay(4000);
     attachInterrupt(digitalPinToInterrupt(CONFIG_BUTTON_PIN), handleButtonPress, FALLING);
+    connected = wm.autoConnect(apNameDevice);
   }
 
   if (!connected)
@@ -338,13 +343,14 @@ bool TempMonitorConfig::begin()
     return false;
   }
 
-  ESP_LOGV(TAG, "WiFi conectado, direccion IP: %s",  WiFi.localIP().toString().c_str());
+  ESP_LOGV(TAG, "WiFi conectado, direccion IP: %s", WiFi.localIP().toString().c_str());
 
   const unsigned long ntpTimeout = 15000; // 15 segundos
   unsigned long start = millis();
   configTime(0, 0, "pool.ntp.org", "time.nist.gov");
 #if defined(ESP32_S3_DEVKITM_1)
-  wrgb_1.switch_color(0, 200, 0);
+  wrgb_1.switch_color(80, 180, 80);
+  delay(2000);
 #endif
   while (time(nullptr) < ESP_MAIL_CLIENT_VALID_TS)
   {

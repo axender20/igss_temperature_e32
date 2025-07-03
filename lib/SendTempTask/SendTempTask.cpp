@@ -36,6 +36,7 @@ void SendTempTask::taskFunction(void *parameter)
             // lectura de temperatura
             // float temperature = random(20, 30) + (random(0, 100) / 100.0);
             float temperature = sh_temperarute_status.get_average();
+            temperature = roundf(temperature * 100.0f) / 100.0f;
 
             task->sendTemperatureData(temperature);
             // Serial.printf("Stack libre: %d words\n", uxTaskGetStackHighWaterMark(NULL));
@@ -59,6 +60,9 @@ void SendTempTask::taskFunction(void *parameter)
                 body += task->deviceId;
                 body += "\n";
                 body += "Fecha/hora: #esp_mail_current_time\n";
+                body += "\n";
+                // body += "Mayor información visite:\n";
+                // body += "https://cloud.temperatura.iot.com.gt\n";
                 EmailSender::getInstance().sendMail(subject, body);
                 lastEmailSent = now;
                 task->sendTemperatureData(raw_temp);
