@@ -1,4 +1,4 @@
-//> Nivel de debug 
+//> Nivel de debug
 #define CORE_DEBUG_LEVEL ARDUHAL_LOG_LEVEL_VERBOSE
 #include "SendTempTask.h"
 #include <shared_temperature_status.h>
@@ -23,8 +23,11 @@ void SendTempTask::taskFunction(void *parameter)
     const uint32_t delayMsSeg = 1000;
     const int delayFrecM = (int)task->frecuenciaMuestreo;
     int secondsToPassFM = 0;
-    static unsigned long lastEmailSent = 0;
+    static unsigned long lastEmailSent = 180000;
+    static unsigned long alarmStartTime = 0;
+    static bool alarmPersitActive = false;
     const unsigned long emailCooldown = 180000; // 180 segundos (3 minutos) en ms
+    const unsigned long alarmHoldTime = 15000;  // 15 segundos
     const bool _alertsActive = task->alertsActive;
     while (true)
     {
@@ -48,7 +51,13 @@ void SendTempTask::taskFunction(void *parameter)
         if (_alertsActive && sh_temperarute_status.get_alarm())
         {
             unsigned long now = millis();
-            if (now - lastEmailSent >= emailCooldown)
+            if (!alarmPersitActive)
+            {
+                alarmPersitActive = true;
+                alarmStartTime = now;
+            }
+            if ((now - alarmStartTime >= alarmHoldTime) &&
+                (now - lastEmailSent >= emailCooldown))
             {
                 float raw_temp = sh_temperarute_status.get_raw();
                 String subject = "¡Alerta de temperatura!";
@@ -67,6 +76,11 @@ void SendTempTask::taskFunction(void *parameter)
                 lastEmailSent = now;
                 task->sendTemperatureData(raw_temp);
             }
+        }
+        else
+        {
+            alarmPersitActive = false;
+            alarmStartTime = 0;
         }
     }
 }

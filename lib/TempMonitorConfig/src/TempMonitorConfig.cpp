@@ -162,6 +162,9 @@ void TempMonitorConfig::configModeCallback(WiFiManager *myWiFiManager)
   ESP_LOGI(TAG, "Entered configuration mode");
   ESP_LOGI(TAG, "Config SSID: %s", myWiFiManager->getConfigPortalSSID());
   ESP_LOGI(TAG, "Config IP Address: %s", WiFi.softAPIP().toString().c_str());
+#if defined(ESP32_S3_DEVKITM_1)
+  wrgb_1.switch_color(0, 255, 255);
+#endif
 }
 
 bool TempMonitorConfig::begin()
@@ -349,7 +352,7 @@ bool TempMonitorConfig::begin()
   unsigned long start = millis();
   configTime(0, 0, "pool.ntp.org", "time.nist.gov");
 #if defined(ESP32_S3_DEVKITM_1)
-  wrgb_1.switch_color(80, 180, 80);
+  wrgb_1.switch_color(0, 255, 40);
   delay(2000);
 #endif
   while (time(nullptr) < ESP_MAIL_CLIENT_VALID_TS)

@@ -8,11 +8,12 @@
 #include "handler_rtemperature.h"
 #include "NtpSyncTask.h"
 #include "esp_log.h"
+#include "WiFiMonitorTask.h"
 
 static const char *TAG = "main";
 
 NtpSyncTask ntpTask;
-
+WiFiMonitorTask wifiMonitor;
 TempMonitorConfig config;
 SendTempTask sendTask;
 
@@ -27,7 +28,7 @@ void setup()
         delay(3000);
         ESP.restart();
     }
-    
+
     const float umbMax = config.getAlertsActive() ? config.getUmbMax() : 150.0f;
     const float umbMin = config.getAlertsActive() ? config.getUmbMin() : -40.0f;
     init_handler_rtemperature(umbMax, umbMin);
@@ -49,6 +50,8 @@ void setup()
 
     // tarea de actualizacion horaria por ntp
     ntpTask.begin();
+
+    wifiMonitor.begin();
 }
 
 void loop()
