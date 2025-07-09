@@ -20,13 +20,15 @@ private:
 
     TaskHandle_t taskHandle;
     int frecuenciaMuestreo;
+    float umbMax;
+    float umbMin;
     bool alertsActive;
 
     static void taskFunction(void *parameter);
 
 public:
     SendTempTask();
-    bool begin(int frecMuestreo, bool alertasActivas = false);
+    bool begin(int frecMuestreo, float umbMaxTemp, float umbMinTemp, bool alertasActivas = false);
     void stop();
     bool isRunning();
 };

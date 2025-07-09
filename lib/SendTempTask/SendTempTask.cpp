@@ -9,6 +9,8 @@ static const char *TAG = "sndtmptask";
 
 SendTempTask::SendTempTask() : taskHandle(NULL),
                                frecuenciaMuestreo(0),
+                               umbMax(0),
+                               umbMin(0),
                                alertsActive(false)
 {
     uint8_t mac[6];
@@ -64,6 +66,13 @@ void SendTempTask::taskFunction(void *parameter)
                 String body = "Se ha detectado una temperatura fuera de rango.\n";
                 body += "Temperatura actual: ";
                 body += String(raw_temp, 2);
+                body += " °C\n";
+                body += "Umbrales de temperatura configurados\n: ";
+                body += " Max:";
+                body += String((float)task->umbMax, 2);
+                body += " °C\n";
+                body += " Min:";
+                body += String((float)task->umbMin, 2);
                 body += " °C\n";
                 body += "MAC del dispositivo: ";
                 body += task->deviceId;
@@ -136,7 +145,7 @@ bool SendTempTask::sendTemperatureData(float temperature)
     return success;
 }
 
-bool SendTempTask::begin(int frecMuestreo, bool alertasActivas)
+bool SendTempTask::begin(int frecMuestreo, float umbMaxTemp, float umbMinTemp, bool alertasActivas)
 {
     if (taskHandle != NULL)
     {
@@ -144,6 +153,8 @@ bool SendTempTask::begin(int frecMuestreo, bool alertasActivas)
     }
 
     frecuenciaMuestreo = frecMuestreo;
+    umbMax = umbMaxTemp;
+    umbMin = umbMinTemp;
     alertsActive = alertasActivas;
 
     BaseType_t res = xTaskCreate(

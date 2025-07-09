@@ -27,6 +27,7 @@ void WiFiMonitorTask::taskFunction(void* parameter) {
             wifi_fail_count++;
             if (wifi_fail_count > maxFails) {
                 ESP_LOGE(TAG_WIFI_MON, "No se pudo reconectar WiFi despues de 30 intentos");
+                wifi_fail_count = 0;
                 // ESP.restart();
             }
         } else {

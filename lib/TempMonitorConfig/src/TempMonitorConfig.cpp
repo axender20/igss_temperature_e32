@@ -352,7 +352,7 @@ bool TempMonitorConfig::begin()
   unsigned long start = millis();
   configTime(0, 0, "pool.ntp.org", "time.nist.gov");
 #if defined(ESP32_S3_DEVKITM_1)
-  wrgb_1.switch_color(0, 255, 40);
+  wrgb_1.switch_color(0, 255, 20);
   delay(2000);
 #endif
   while (time(nullptr) < ESP_MAIL_CLIENT_VALID_TS)

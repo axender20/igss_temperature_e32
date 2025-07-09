@@ -41,7 +41,7 @@ void setup()
         1,
         NULL);
 
-    if (!sendTask.begin(config.getFrecMuestreo(), config.getAlertsActive()))
+    if (!sendTask.begin(config.getFrecMuestreo(), umbMax, umbMin, config.getAlertsActive()))
     {
         ESP_LOGE(TAG, "Fallo al iniciar tarea de envio");
         ESP.restart();
